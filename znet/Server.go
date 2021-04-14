@@ -1,7 +1,9 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"net"
 	"time"
 	"zinxLearn/ziface"
@@ -22,6 +24,17 @@ type Server struct {
 	Port int
 }
 
+// --------- 定义当前的客户端连接的handle api-----------------
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	fmt.Println("[Conn Handle] CallBackToClient....")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Println("write back buf err : ", err)
+		return errors.New("Call back err")
+	}
+	return nil
+}
+
+//-----------------实现 ziface.Iserver里面的全部接口的方法
 //实现IServer接口的所有方法
 //启动
 func (s Server) Start() {
@@ -49,32 +62,39 @@ func (s Server) Start() {
 		// 3：启动server网络连接业务
 		for {
 			// 3.1: 阻塞等待客户端连接
-			accept, err := listenner.Accept()
+			accept, err := listenner.AcceptTCP()
 
 			if err != nil {
 				fmt.Println("accept err : ", err)
 				continue
 			}
 
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					read, err2 := accept.Read(buf)
+			// 3.2 todo Server.Start() 设置服务器最大连接控制,如果超过最大连接，那么则关闭此新的连接
 
-					if err2 != nil {
-						fmt.Println(" recv buf err: ", err2)
-						continue
-					}
+			// 3.3 处理改新连接请求的业务方法 此时应该有 handler 和 conn是绑定的
+			v1, _ := uuid.NewV1()
+			conntion := NewConntion(accept, v1.String(), CallBackToClient)
 
-					// 回显
-					if _, err3 := accept.Write(buf[:read]); err3 != nil {
-						fmt.Println(" write back err: ", err3)
-						continue
-					}
-				}
-			}()
+			go conntion.Start()
+			// 版本一注释掉
+			//		go func() {
+			//			for {
+			//				buf := make([]byte, 512)
+			//				read, err2 := accept.Read(buf)
+			//
+			//				if err2 != nil {
+			//					fmt.Println(" recv buf err: ", err2)
+			//					continue
+			//				}
+			//
+			//				// 回显
+			//				if _, err3 := accept.Write(buf[:read]); err3 != nil {
+			//					fmt.Println(" write back err: ", err3)
+			//					continue
+			//				}
+			//			}
+			//		}()
 		}
-
 	}()
 
 }
