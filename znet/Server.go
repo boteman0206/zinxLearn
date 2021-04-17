@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gofrs/uuid"
 	"net"
@@ -22,17 +21,20 @@ type Server struct {
 
 	// 端口
 	Port int
+
+	// 04，15 当前Server由用户绑定的会掉router，也就是Server注册的连接对应的业务
+	Router ziface.IRouter
 }
 
 // --------- 定义当前的客户端连接的handle api-----------------
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	fmt.Println("[Conn Handle] CallBackToClient....")
-	if _, err := conn.Write(data[:cnt]); err != nil {
-		fmt.Println("write back buf err : ", err)
-		return errors.New("Call back err")
-	}
-	return nil
-}
+//func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+//	fmt.Println("[Conn Handle] CallBackToClient....")
+//	if _, err := conn.Write(data[:cnt]); err != nil {
+//		fmt.Println("write back buf err : ", err)
+//		return errors.New("Call back err")
+//	}
+//	return nil
+//}
 
 //-----------------实现 ziface.Iserver里面的全部接口的方法
 //实现IServer接口的所有方法
@@ -73,7 +75,7 @@ func (s Server) Start() {
 
 			// 3.3 处理改新连接请求的业务方法 此时应该有 handler 和 conn是绑定的
 			v1, _ := uuid.NewV1()
-			conntion := NewConntion(accept, v1.String(), CallBackToClient)
+			conntion := NewConntion(accept, v1.String(), s.Router)
 
 			go conntion.Start()
 			// 版本一注释掉
@@ -123,6 +125,12 @@ func NewServer(name string) ziface.IServer {
 		"tcp4",
 		"0.0.0.0",
 		8081,
+		nil,
 	}
 	return s
+}
+
+// todo 这里必须要用指针传递 否则router会报nil空指针， 因为你并没有真正的赋值, 是值拷贝 3.0 添加路由方法
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
 }

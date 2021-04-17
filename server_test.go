@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 	"time"
+	"zinxLearn/ziface"
 	"zinxLearn/znet"
 )
 
@@ -47,12 +48,36 @@ func ClientTest() {
 
 }
 
+type MyRouter struct {
+	znet.BaseRouter
+}
+
+func (router *MyRouter) PreHandle(req ziface.IRequest) {
+	fmt.Println(" call router Prehandle..")
+	_, err := req.GetConnection().GetTCPConnection().Write([]byte("preHandle run ...."))
+	if err != nil {
+		fmt.Println(" preHandle error")
+	}
+
+}
+
+func (router *MyRouter) Handle(req ziface.IRequest) {
+
+}
+
+func (router *MyRouter) PostHandle(req ziface.IRequest) {
+
+}
+
 func TestServer(t *testing.T) {
 	/**
 	服务器测试
 	*/
 
 	server := znet.NewServer("myZinx")
+
+	router := MyRouter{}
+	server.AddRouter(&router)
 
 	go ClientTest()
 

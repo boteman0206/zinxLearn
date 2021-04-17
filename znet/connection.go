@@ -18,27 +18,30 @@ type Connection struct {
 	// 当前连接的关闭状态
 	isClosed bool
 
-	//处理连接的api方法
-	handleAPI ziface.HandFunc
+	////2.0版本替换 处理连接的api方法
+	//handleAPI ziface.HandFunc
+
+	Router ziface.IRouter
 
 	// 告知该连接已经退出/停止的channel
 	ExitBuffChan chan bool
 }
 
 // 创建连接的方法
-func NewConntion(conn *net.TCPConn, connID string, callback_api ziface.HandFunc) *Connection {
+func NewConntion(conn *net.TCPConn, connID string, router ziface.IRouter) *Connection {
 
 	c := &Connection{
 		Conn:         conn,
 		ConnID:       connID,
 		isClosed:     false,
-		handleAPI:    callback_api,
+		Router:       router,
 		ExitBuffChan: make(chan bool, 1),
 	}
 	return c
 }
 
 //处理当前数据的Groutine
+//noinspection GoInvalidCompositeLiteral
 func (c *Connection) StartReader() {
 	fmt.Println(" 开始执行 reader Groutine 方法 。。。。")
 	defer fmt.Println(c.Conn.RemoteAddr().String(), " 连接 reader exit!")
@@ -48,19 +51,31 @@ func (c *Connection) StartReader() {
 	for {
 		//读取我们最大的数据
 		buf := make([]byte, 512)
-		read, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("read data error ...")
 			continue
 		}
 
 		// 调用当前连接业务（执行当前的conn绑定的handle方法）
-		err = c.handleAPI(c.Conn, buf, read)
-		if err != nil {
-			fmt.Println("handler func error...")
-			c.ExitBuffChan <- true
-			return
-		}
+		// 2.0 版本err = c.handleAPI(c.Conn, buf, read)
+
+		//3.0版本IRouter
+		var request = Request{
+			conn: c,
+			data: buf,
+		} // 执行注册的路由方法
+		fmt.Println("request data : ", request.GetConnection().GetTCPConnection())
+		fmt.Println(request.GetConnection().GetConnID())
+		go func(request2 *Request) {
+
+			fmt.Println("handler func run...")
+			c.Router.PreHandle(request2)
+			c.Router.Handle(request2)
+			c.Router.PostHandle(request2)
+
+		}(&request)
+
 	}
 
 }
@@ -74,6 +89,7 @@ func (c *Connection) Start() {
 	for {
 		select {
 		case <-c.ExitBuffChan:
+			fmt.Println("============exit=========")
 			// 得到消息退出，不用阻塞
 			return
 		}
@@ -102,7 +118,7 @@ func (c *Connection) Stop() {
 }
 
 // 从当前连接获取原始连接的socket TCPConn
-func (c *Connection) GetTcpConnection() *net.TCPConn {
+func (c *Connection) GetTCPConnection() *net.TCPConn {
 	return c.Conn
 }
 
