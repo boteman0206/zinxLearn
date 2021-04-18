@@ -54,6 +54,7 @@ func (c *Connection) StartReader() {
 		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("read data error ...")
+			c.ExitBuffChan <- true
 			continue
 		}
 
