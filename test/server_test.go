@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"fmt"
@@ -54,7 +54,8 @@ type MyRouter struct {
 
 func (router *MyRouter) PreHandle(req ziface.IRequest) {
 	fmt.Println(" call router Prehandle..")
-	_, err := req.GetConnection().GetTCPConnection().Write([]byte("preHandle run ...."))
+	_, err := req.GetConnection().GetTCPConnection().Write([]byte("preHandle run ...." +
+		time.Now().Format("2006-01-02 15:04:05")))
 	if err != nil {
 		fmt.Println(" preHandle error")
 	}
