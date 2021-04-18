@@ -5,6 +5,7 @@ import (
 	"github.com/gofrs/uuid"
 	"net"
 	"time"
+	"zinxLearn/utils"
 	"zinxLearn/ziface"
 )
 
@@ -40,7 +41,12 @@ type Server struct {
 //实现IServer接口的所有方法
 //启动
 func (s Server) Start() {
-	fmt.Printf("[START] Server listenner at IP: %s, Port %d, is starting\n", s.IP, s.Port)
+	//版本四打印信息
+	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
+	fmt.Printf("[Zinx] Version: %s, MaxConn: %d,  MaxPacketSize: %d\n",
+		utils.GlobalObject.Version,
+		utils.GlobalObject.MaxConn,
+		utils.GlobalObject.MaxPacketSize)
 
 	//开启一个go去做服务端的Lister业务
 	go func() {
@@ -120,11 +126,16 @@ func (s Server) Server() {
 }
 
 func NewServer(name string) ziface.IServer {
+
+	// 版本4.0 先初始化全局的配置文件
+	utils.GlobalObject.Reload()
+
+	// 替换全局配置
 	s := &Server{
-		name,
+		utils.GlobalObject.Name,
 		"tcp4",
-		"0.0.0.0",
-		8081,
+		utils.GlobalObject.Host,
+		utils.GlobalObject.TcpPort,
 		nil,
 	}
 	return s
