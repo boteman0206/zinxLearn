@@ -37,7 +37,7 @@ var GlobalObject *GlobalObj
 
 // 读取用户的配置表属性
 func (g *GlobalObj) Reload() {
-	file, err := ioutil.ReadFile("../conf/zinx.json")
+	file, err := ioutil.ReadFile("conf/zinx.json")
 	if err != nil {
 		panic(err)
 	}
