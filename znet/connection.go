@@ -1,7 +1,9 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"zinxLearn/ziface"
 )
@@ -49,9 +51,13 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
+
+		// 版本5.0 创建封包拆包对象
+		dp := NewDataPack()
+
 		//读取我们最大的数据
-		buf := make([]byte, 512)
-		_, err := c.Conn.Read(buf)
+		buf := make([]byte, dp.GetHeadLen())
+		_, err := io.ReadFull(c.GetTCPConnection(), buf)
 		if err != nil {
 			fmt.Println("read data error ...")
 			c.ExitBuffChan <- true
@@ -61,23 +67,73 @@ func (c *Connection) StartReader() {
 		// 调用当前连接业务（执行当前的conn绑定的handle方法）
 		// 2.0 版本err = c.handleAPI(c.Conn, buf, read)
 
+		// 版本5.0 将获取的数据进行拆包
+		//拆包，得到msgid 和 datalen 放在msg中
+		msg, err := dp.Unpack(buf)
+		if err != nil {
+			fmt.Println("unpack error ", err)
+			c.ExitBuffChan <- true
+			continue
+		}
+
+		//根据 dataLen 读取 data，放在msg.Data中
+		var data []byte
+		if msg.GetDataLen() > 0 {
+			data = make([]byte, msg.GetDataLen())
+			if _, err := io.ReadFull(c.GetTCPConnection(), data); err != nil {
+				fmt.Println("read msg data error ", err)
+				c.ExitBuffChan <- true
+				continue
+			}
+		}
+		msg.SetData(data)
+
 		//3.0版本IRouter
 		var request = Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		} // 执行注册的路由方法
 		fmt.Println("request data : ", request.GetConnection().GetTCPConnection())
 		fmt.Println(request.GetConnection().GetConnID())
-		go func(request2 *Request) {
-
-			fmt.Println("handler func run...")
-			c.Router.PreHandle(request2)
-			c.Router.Handle(request2)
-			c.Router.PostHandle(request2)
-
-		}(&request)
+		req := Request{
+			conn: c,
+			msg:  msg,
+		}
+		//从路由Routers 中找到注册绑定Conn的对应Handle
+		go func(request ziface.IRequest) {
+			//执行注册的路由方法
+			c.Router.PreHandle(request)
+			c.Router.Handle(request)
+			c.Router.PostHandle(request)
+		}(&req)
 
 	}
+
+}
+
+// 新增5.0Message数据发送给远程的tcp客户端
+
+func (r *Connection) SendMsg(msgId uint32, data []byte) error {
+	if r.isClosed {
+		return errors.New("conntion closed when send message")
+	}
+
+	// 将data数据封包
+	dp := NewDataPack()
+	pack, err := dp.Pack(NewMsgPackage(msgId, data))
+	if err != nil {
+		fmt.Println("PACK error msg id = ", msgId)
+		return errors.New("pack error msg")
+	}
+
+	// 写回客户端
+	_, err = r.Conn.Write(pack)
+	if err != nil {
+		r.ExitBuffChan <- true
+		return errors.New("conn write error ")
+	}
+
+	return nil
 
 }
 

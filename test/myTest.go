@@ -78,3 +78,12 @@ func Test4() {
 	}
 	fmt.Println("反序列化后：", dataB)
 }
+
+func Test5() {
+
+	i1 := []byte{1, 2, 3}
+	i2 := []byte{11, 21, 31}
+	//i3 := []byte{12,22,32}
+	i := append(i1, i2...)
+	fmt.Println(i)
+}

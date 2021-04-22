@@ -41,13 +41,14 @@ type Server struct {
 //实现IServer接口的所有方法
 //启动
 func (s Server) Start() {
-	//版本四打印信息
+	//版本四打印信息\
+	fmt.Println("开始执行start方法 服务器监听")
 	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
 	fmt.Printf("[Zinx] Version: %s, MaxConn: %d,  MaxPacketSize: %d\n",
 		utils.GlobalObject.Version,
 		utils.GlobalObject.MaxConn,
 		utils.GlobalObject.MaxPacketSize)
-
+	fmt.Println("globalObject data: ", utils.GlobalObject)
 	//开启一个go去做服务端的Lister业务
 	go func() {
 		//1： 获取一个tcp的连接addr

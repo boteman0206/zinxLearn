@@ -45,6 +45,7 @@ func (g *GlobalObj) Reload() {
 	// 将json数据解析到struct中
 	fmt.Println("json data : ", string(file))
 	err = json.Unmarshal(file, &GlobalObject)
+	fmt.Println("data globalObject : ", &GlobalObject)
 	if err != nil {
 		panic(err)
 	}
@@ -55,13 +56,13 @@ func (g *GlobalObj) Reload() {
 
 func init() {
 	// 初始化GlobalObject变量，设置一些默认值
-	GlobalObject := &GlobalObj{
+	GlobalObject = &GlobalObj{
 		Name:          "zinxServerApp",
 		Version:       "v0.4",
 		TcpPort:       8081,
 		Host:          "0.0.0.0",
 		MaxConn:       12000,
-		MaxPacketSize: 4096,
+		MaxPacketSize: 512,
 	}
 
 	// 从配置表中加载用户的配置
