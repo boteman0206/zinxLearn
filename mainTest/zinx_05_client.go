@@ -22,7 +22,7 @@ func main() {
 	for {
 		pack := znet.NewDataPack()
 
-		msgPackage := znet.NewMsgPackage(1, []byte("hello world!"))
+		msgPackage := znet.NewMsgPackage(12, []byte("hello world!"))
 		bytes, err := pack.Pack(msgPackage)
 		if err != nil {
 			fmt.Println("封包错误 。。。")

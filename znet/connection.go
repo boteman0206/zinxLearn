@@ -23,20 +23,21 @@ type Connection struct {
 	////2.0版本替换 处理连接的api方法
 	//handleAPI ziface.HandFunc
 
-	Router ziface.IRouter
+	//Router ziface.IRouter
+	MsgHandle ziface.IMsgHandle
 
 	// 告知该连接已经退出/停止的channel
 	ExitBuffChan chan bool
 }
 
 // 创建连接的方法
-func NewConntion(conn *net.TCPConn, connID string, router ziface.IRouter) *Connection {
+func NewConntion(conn *net.TCPConn, connID string, msgHandler ziface.IMsgHandle) *Connection {
 
 	c := &Connection{
 		Conn:         conn,
 		ConnID:       connID,
 		isClosed:     false,
-		Router:       router,
+		MsgHandle:    msgHandler,
 		ExitBuffChan: make(chan bool, 1),
 	}
 	return c
@@ -100,12 +101,15 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 		//从路由Routers 中找到注册绑定Conn的对应Handle
-		go func(request ziface.IRequest) {
-			//执行注册的路由方法
-			c.Router.PreHandle(request)
-			c.Router.Handle(request)
-			c.Router.PostHandle(request)
-		}(&req)
+		//go func(request ziface.IRequest) {
+		//	//执行注册的路由方法
+		//	c.Router.PreHandle(request)
+		//	c.Router.Handle(request)
+		//	c.Router.PostHandle(request)
+		//}(&req)
+
+		// 版本 6.0多路由模式
+		go c.MsgHandle.DoMsgHandler(&req)
 
 	}
 

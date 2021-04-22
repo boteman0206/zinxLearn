@@ -24,7 +24,10 @@ type Server struct {
 	Port int
 
 	// 04，15 当前Server由用户绑定的会掉router，也就是Server注册的连接对应的业务
-	Router ziface.IRouter
+	//Router ziface.IRouter
+
+	//6.0 多路由 当前Server的消息管理模块，用来绑定MsgId和对应的处理方法
+	msgHandler ziface.IMsgHandle
 }
 
 // --------- 定义当前的客户端连接的handle api-----------------
@@ -82,7 +85,7 @@ func (s Server) Start() {
 
 			// 3.3 处理改新连接请求的业务方法 此时应该有 handler 和 conn是绑定的
 			v1, _ := uuid.NewV1()
-			conntion := NewConntion(accept, v1.String(), s.Router)
+			conntion := NewConntion(accept, v1.String(), s.msgHandler)
 
 			go conntion.Start()
 			// 版本一注释掉
@@ -137,12 +140,12 @@ func NewServer(name string) ziface.IServer {
 		"tcp4",
 		utils.GlobalObject.Host,
 		utils.GlobalObject.TcpPort,
-		nil,
+		NewMsgHandle(),
 	}
 	return s
 }
 
 // todo 这里必须要用指针传递 否则router会报nil空指针， 因为你并没有真正的赋值, 是值拷贝 3.0 添加路由方法
-func (s *Server) AddRouter(router ziface.IRouter) {
-	s.Router = router
+func (s *Server) AddRouter(msgId uint32, router ziface.IRouter) {
+	s.msgHandler.AddRouter(msgId, router)
 }
