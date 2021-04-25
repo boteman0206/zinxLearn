@@ -28,6 +28,9 @@ type Connection struct {
 
 	// 告知该连接已经退出/停止的channel
 	ExitBuffChan chan bool
+
+	// 版本7.0 无缓冲的管道，用于读写两个groutine之间的消息通信
+	msgChan chan []byte
 }
 
 // 创建连接的方法
@@ -39,8 +42,31 @@ func NewConntion(conn *net.TCPConn, connID string, msgHandler ziface.IMsgHandle)
 		isClosed:     false,
 		MsgHandle:    msgHandler,
 		ExitBuffChan: make(chan bool, 1),
+		msgChan:      make(chan []byte), // msgChan初始化
 	}
 	return c
+}
+
+/**
+写消息Goroutine, 用户数据发送给客户端
+*/
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer Groutine is running]")
+	defer fmt.Println(c.RemoteAddr().String(), "[conn writer exit]")
+
+	for {
+		select {
+		case data := <-c.msgChan:
+			// 有数据要写给客户端
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println("Send data error :, ", err, " Conn writer exit")
+				return
+			}
+		case <-c.ExitBuffChan:
+			// conn已经关闭
+			return
+		}
+	}
 }
 
 //处理当前数据的Groutine
@@ -116,7 +142,9 @@ func (c *Connection) StartReader() {
 }
 
 // 新增5.0Message数据发送给远程的tcp客户端
-
+/**
+版本7.0 Reader讲发送客户端的数据改为发送至Channel
+*/
 func (r *Connection) SendMsg(msgId uint32, data []byte) error {
 	if r.isClosed {
 		return errors.New("conntion closed when send message")
@@ -131,11 +159,14 @@ func (r *Connection) SendMsg(msgId uint32, data []byte) error {
 	}
 
 	// 写回客户端
-	_, err = r.Conn.Write(pack)
-	if err != nil {
-		r.ExitBuffChan <- true
-		return errors.New("conn write error ")
-	}
+	//_, err = r.Conn.Write(pack)
+	//if err != nil {
+	//	r.ExitBuffChan <- true
+	//	return errors.New("conn write error ")
+	//}
+
+	// 版本7.0直接写到消息通道中，不直接写会客户端
+	r.msgChan <- pack
 
 	return nil
 
@@ -147,6 +178,8 @@ func (c *Connection) Start() {
 	// 开始处理该链接读取客户端数据之后的请求业务
 	go c.StartReader()
 
+	// 版本7.0开始写数据到goroutine中
+	go c.StartWriter()
 	for {
 		select {
 		case <-c.ExitBuffChan:
