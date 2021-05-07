@@ -15,7 +15,7 @@ type Connection struct {
 	Conn *net.TCPConn
 
 	//当前的ID 也可以成为SessionID 全局唯一
-	ConnID string
+	ConnID uint32
 
 	// 当前连接的关闭状态
 	isClosed bool
@@ -34,7 +34,7 @@ type Connection struct {
 }
 
 // 创建连接的方法
-func NewConntion(conn *net.TCPConn, connID string, msgHandler ziface.IMsgHandle) *Connection {
+func NewConntion(conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandle) *Connection {
 
 	c := &Connection{
 		Conn:         conn,
@@ -217,7 +217,7 @@ func (c *Connection) GetTCPConnection() *net.TCPConn {
 }
 
 // 从当前的获取连接的ID
-func (c *Connection) GetConnID() string {
+func (c *Connection) GetConnID() uint32 {
 	return c.ConnID
 
 }

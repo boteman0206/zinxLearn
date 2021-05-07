@@ -2,7 +2,6 @@ package znet
 
 import (
 	"fmt"
-	"github.com/gofrs/uuid"
 	"net"
 	"time"
 	"zinxLearn/utils"
@@ -84,8 +83,9 @@ func (s Server) Start() {
 			// 3.2 todo Server.Start() 设置服务器最大连接控制,如果超过最大连接，那么则关闭此新的连接
 
 			// 3.3 处理改新连接请求的业务方法 此时应该有 handler 和 conn是绑定的
-			v1, _ := uuid.NewV1()
-			conntion := NewConntion(accept, v1.String(), s.msgHandler)
+			//v1, _ := uuid.NewV1()
+			v1 := 0
+			conntion := NewConntion(accept, uint32(v1), s.msgHandler)
 
 			go conntion.Start()
 			// 版本一注释掉
